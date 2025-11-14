@@ -7,7 +7,7 @@ registerForm.addEventListener('submit', async (e)=>{
     const formdata = new FormData(registerForm)
     // console.log(formdata);
     const data = Object.fromEntries(formdata.entries());
-    const res = await fetch("http://localhost:3000/register",{
+    const res = await fetch("http://localhost:8001/register",{
         method:"POST",
         body:JSON.stringify(data),
         headers:{

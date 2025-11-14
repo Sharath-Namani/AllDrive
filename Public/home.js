@@ -5,9 +5,9 @@ const uploadForm = document.getElementById('uploadForm');
 const status = document.getElementById('status');
 // status.textContent = '';
 
-async function refreshFileList(){
+async function refreshFileList(req, res){
 
-    const files = await fetch('http://localhost:3000/files',{
+    const files = await fetch('http://localhost:8001/files',{
         headers:{"Authorization":'Bearer '+ localStorage.getItem('token')}
     }).then(res=>res.json());
     if(res.status === 401){
@@ -41,7 +41,7 @@ uploadForm.addEventListener('submit', async (e)=>{
     // for (let i = 0; i < files.length; i++) {
     //     formdata.append('files', files[i]);
     // }
-    const res = await fetch('http://localhost:3000/upload', {
+    const res = await fetch('http://localhost:8001/upload', {
         method: 'POST',
         body: formdata,
         headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')}
@@ -49,7 +49,7 @@ uploadForm.addEventListener('submit', async (e)=>{
     if(res.ok){
         status.textContent = 'Files uploaded successfully';
         uploadForm.reset();
-        await refreshFileList();
+        await refreshFileList(req, res);
     }
     else{
         status.textContent = 'Error uploading files3';

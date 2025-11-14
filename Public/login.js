@@ -12,7 +12,7 @@ loginForm.addEventListener("submit", async (e)=>{
         loginStatus.textContent = "Please enter both email and password";
         return;
     }
-    const res = await fetch("http://localhost:3000/login", {
+    const res = await fetch("http://localhost:8001/login", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"

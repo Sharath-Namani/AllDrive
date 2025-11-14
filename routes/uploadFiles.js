@@ -8,23 +8,32 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 export const middlewareUpload = upload.array('files');
 
+// Lazy Mongo client and bucket initialization to avoid crashing when MONGO_URI is missing at import time
+let client;
+let bucket;
+async function ensureBucket() {
+    if (bucket) return bucket;
+    const mongoURI = process.env.MONGO_URI;
+    if (!mongoURI) {
+        throw new Error('MONGO_URI is not set');
+    }
+    client = new MongoClient(mongoURI);
+    await client.connect();
+    const db = client.db('AllDrive');
+    bucket = new GridFSBucket(db, { bucketName: "uploads" });
+    return bucket;
+}
 
-const mongoURI = process.env.MONGO_URI;
-const client = new MongoClient(mongoURI);
-await client.connect();
-const db = client.db('AllDrive');
-const bucket = new GridFSBucket(db, { bucketName: "uploads" });
-
-
-export function uploadFiles(req, res) {
+export async function uploadFiles(req, res) {
     try {
+        const bucket = await ensureBucket();
         // console.log(req.files);
         // console.log(req.body)
         const files = req.files;
         if(!files || files.length ===0){
             return res.status(400).send("No files uploaded");
         }
-        const uploadFiles = files.map(file=>{
+    const uploadPromises = files.map(file=>{
             return new Promise((resolve, reject)=>{
                 const readableStream = new Readable();
                 readableStream.push(file.buffer);
@@ -39,7 +48,7 @@ export function uploadFiles(req, res) {
                 });
             });
         });
-        Promise.all(uploadFiles).then(results=>{
+    Promise.all(uploadPromises).then(results=>{
             res.status(201).json({ files: results });
         }).catch(err=>{
             res.status(500).send('Error uploading files1');
@@ -52,6 +61,7 @@ export function uploadFiles(req, res) {
 
 export async function getFiles(req, res) {
     try {
+        const bucket = await ensureBucket();
         // console.log(req.user);
         const files = await bucket.find({"metadata.userId": req.user.id }).toArray();
         // console.log(files);
