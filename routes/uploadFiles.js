@@ -1,25 +1,25 @@
-import express from "express";
 import multer from "multer";
 import { MongoClient, GridFSBucket } from "mongodb";
 import { Readable } from "stream";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 dotenv.config();
 const upload = multer({ storage: multer.memoryStorage() });
 
 export const middlewareUpload = upload.array('files');
 
 // Lazy Mongo client and bucket initialization to avoid crashing when MONGO_URI is missing at import time
-let client;
-let bucket;
+// let client;
+let bucket=null;
 async function ensureBucket() {
     if (bucket) return bucket;
-    const mongoURI = process.env.MONGO_URI;
-    if (!mongoURI) {
-        throw new Error('MONGO_URI is not set');
-    }
-    client = new MongoClient(mongoURI);
-    await client.connect();
-    const db = client.db('AllDrive');
+    // const mongoURI = process.env.MONGO_URI;
+    // if (!mongoURI) {
+    //     throw new Error('MONGO_URI is not set');
+    // }
+    // client = new MongoClient(mongoURI);
+    // await client.connect();
+    const db = mongoose.connection.db;
     bucket = new GridFSBucket(db, { bucketName: "uploads" });
     return bucket;
 }
@@ -63,7 +63,8 @@ export async function getFiles(req, res) {
     try {
         const bucket = await ensureBucket();
         // console.log(req.user);
-        const files = await bucket.find({"metadata.userId": req.user.id }).toArray();
+        const decoded = req.user;
+        const files = await bucket.find({"_id": req.user.id }).toArray();
         // console.log(files);
         if(!files || files.length ===0){
           return res.status(404).send("Start uploading files to see them here");

@@ -5,7 +5,6 @@ registerForm.addEventListener('submit', async (e)=>{
     e.preventDefault();
     registerStatus.textContent = '';
     const formdata = new FormData(registerForm)
-    // console.log(formdata);
     const data = Object.fromEntries(formdata.entries());
     const res = await fetch("http://localhost:8001/register",{
         method:"POST",
@@ -18,10 +17,10 @@ registerForm.addEventListener('submit', async (e)=>{
     if(!res.ok){
         registerStatus.textContent = res.statusText;
         return;
-        
     }
     else{
-        registerStatus.textContent = res.statusText;;
+        registerStatus.textContent = res.statusText;
+        window.location.href = 'login.html';
         registerForm.reset();
     }
     })

@@ -3,14 +3,33 @@ const filesInput = document.getElementById('files');
 const uploadBtn = document.getElementById('uploadBtn');
 const uploadForm = document.getElementById('uploadForm');
 const status = document.getElementById('status');
+const getFilesBtn = document.getElementById('getFilesBtn');
+const loginLogoutBtn = document.getElementById('loginLogout');
+
+if(localStorage.getItem('token')){
+    loginLogoutBtn.textContent = 'Logout';
+}
+loginLogoutBtn.addEventListener('click', ()=>{
+    if(localStorage.getItem('token')){
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+    }
+    else{
+        window.location.href = 'login.html';
+    }
+});
+
+getFilesBtn.addEventListener('click', async()=>{
+    await refreshFileList();
+});
 // status.textContent = '';
 
-async function refreshFileList(req, res){
+async function refreshFileList(){
 
     const files = await fetch('http://localhost:8001/files',{
         headers:{"Authorization":'Bearer '+ localStorage.getItem('token')}
     }).then(res=>res.json());
-    if(res.status === 401){
+    if(files.status === 401){
         localStorage.removeItem('token');
         window.location.href = 'login.html';
         return;
@@ -49,10 +68,10 @@ uploadForm.addEventListener('submit', async (e)=>{
     if(res.ok){
         status.textContent = 'Files uploaded successfully';
         uploadForm.reset();
-        await refreshFileList(req, res);
+        await refreshFileList();
     }
     else{
-        status.textContent = 'Error uploading files3';
+        status.textContent = 'Error uploading files3'+res.statusText;
     }
     
 })

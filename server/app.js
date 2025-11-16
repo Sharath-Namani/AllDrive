@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://sharathnamani649_db_user:Sharath%402004@alldrive.bkummzc.mongodb.net/?appName=AllDrive';
+const MONGO_URI = process.env.MONGO_URI ;
 
 // Connect to MongoDB before starting the server
 try {
