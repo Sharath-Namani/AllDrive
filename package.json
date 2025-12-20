@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server/app.js",
-    "dev": "nodemon server/app.js"
+    "dev": "nodemon server/app.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev --prefix frontend\""
   },
   "author": "Sharath Namani",
   "license": "ISC",
@@ -24,6 +25,7 @@
     "nodemon": "^3.1.10"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "nodemon": "^3.1.10"
   }
 }

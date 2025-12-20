@@ -1,5 +1,5 @@
 import multer from "multer";
-import { MongoClient, GridFSBucket } from "mongodb";
+import { MongoClient, GridFSBucket, ObjectId } from "mongodb";
 import { Readable } from "stream";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
@@ -10,7 +10,7 @@ export const middlewareUpload = upload.array('files');
 
 // Lazy Mongo client and bucket initialization to avoid crashing when MONGO_URI is missing at import time
 // let client;
-let bucket=null;
+let bucket = null;
 async function ensureBucket() {
     if (bucket) return bucket;
     // const mongoURI = process.env.MONGO_URI;
@@ -30,27 +30,27 @@ export async function uploadFiles(req, res) {
         // console.log(req.files);
         // console.log(req.body)
         const files = req.files;
-        if(!files || files.length ===0){
+        if (!files || files.length === 0) {
             return res.status(400).send("No files uploaded");
         }
-    const uploadPromises = files.map(file=>{
-            return new Promise((resolve, reject)=>{
+        const uploadPromises = files.map(file => {
+            return new Promise((resolve, reject) => {
                 const readableStream = new Readable();
                 readableStream.push(file.buffer);
                 readableStream.push(null); // Indicate end of stream
-                const uploadStream = bucket.openUploadStream(file.originalname, { contentType: file.mimetype , metadata: { userId: req.user.id } });
+                const uploadStream = bucket.openUploadStream(file.originalname, { contentType: file.mimetype, metadata: { userId: req.user.id, path: req.body.path, isFolder: false } });
                 readableStream.pipe(uploadStream);
-                uploadStream.on('error', (err)=>{
+                uploadStream.on('error', (err) => {
                     reject(err);
                 });
-                uploadStream.on('finish', ()=>{
+                uploadStream.on('finish', () => {
                     resolve({ filename: file.originalname });
                 });
             });
         });
-    Promise.all(uploadPromises).then(results=>{
+        Promise.all(uploadPromises).then(results => {
             res.status(201).json({ files: results });
-        }).catch(err=>{
+        }).catch(err => {
             res.status(500).send('Error uploading files1');
         });
 
@@ -64,13 +64,50 @@ export async function getFiles(req, res) {
         const bucket = await ensureBucket();
         // console.log(req.user);
         const decoded = req.user;
-        const files = await bucket.find({"metadata.userId": req.user.id }).toArray();
+        const files = await bucket.find({ "metadata.userId": req.user.id, "metadata.path": req.query.path, "metadata.isFolder": false }).toArray();
         // console.log(files);
-        if(!files || files.length ===0){
-          return res.status(200).json([]);
+        if (!files || files.length === 0) {
+            return res.status(200).json([]);
         }
         res.json(files);
     } catch (error) {
-        res.status(500).json({error: "Error retrieving files"});
+        res.status(500).json({ error: "Error retrieving files" });
     }
+}
+
+export async function deleteFile(req, res) {
+    try {
+        const bucket = await ensureBucket();
+        const fileId = new ObjectId(req.params.fileId);
+        await bucket.delete(fileId);
+
+        res.status(200).json({ message: "File deleted successfully" });
+    }
+    catch (err) {
+        res.status(500).json({ error: "Error deleting file" });
+    }
+}
+
+export async function createFolder(req, res) {
+    const { path, folderName } = req.body;
+
+    const folderDoc = {
+        filename: folderName,
+        length: 0,
+        uploadDate: new Date(),
+        contentType: 'folder',
+        metadata: {
+            userId: req.user.id,
+            path,
+            isFolder: true
+        }
+    };
+
+    const db = mongoose.connection.db;
+    const result = await db.collection('uploads.files').insertOne(folderDoc);
+    console.log(result);
+    res.status(201).json({
+        _id: result.insertedId,
+        ...folderDoc
+    });
 }
