@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FaCloudUploadAlt, FaFileAlt, FaSignOutAlt, FaSearch } from 'react-icons/fa';
 import './Home.css';
-
+import { useRef } from 'react';
 
 const Home = () => {
     const [files, setFiles] = useState([]);
@@ -13,6 +13,7 @@ const Home = () => {
     const [showModal, setShowModal] = useState(false);
     const [folderName, setFolderName] = useState('');
     const [folders, setFolders] = useState([]);
+    const [currentPath, setCurrentPath] = useState('');
 
     useEffect(() => {
         if (!token) {
@@ -20,16 +21,11 @@ const Home = () => {
             return;
         }
         fetchFiles();
-    }, [token, navigate]);
-
-    const location = useLocation();
-
-    const currentPath = location.pathname
-        .replace(/^\/+/, '')+'/';
+        fetchFolders();
+    }, [token, navigate, currentPath]);
 
     const fetchFiles = async () => {
         try {
-            
             const res = await fetch(`/api/files?path=${encodeURIComponent(currentPath || '')}`, {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
@@ -38,10 +34,8 @@ const Home = () => {
                 handleLogout();
                 return;
             }
-            // console.log(location.pathname+" "+currentPath);
             const data = await res.json();
             setFiles(data);
-            // console.log(data);
         } catch (err) {
             console.error('Error fetching files:', err);
         }
@@ -112,29 +106,67 @@ const Home = () => {
         setFolderName('');
         fetchFolders(); // re-fetch folder list
     };
-    const fetchFolders  = async () =>{
-        try{
+    const fetchFolders = async () => {
+        try {
+            console.log(currentPath);
             const res = await fetch('/api/folders?path=' + currentPath,
-                {headers :{
-                    'Authorization': 'Bearer ' + token,
-                    'Content-Type': 'application/json'
-                }}
+                {
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                }
             )
-            if(res.ok){
+            if (res.ok) {
                 const data = await res.json();
                 setFolders(data);
                 console.log(data);
-                
+
             }
         }
-        catch(err){
+        catch (err) {
             console.log(err);
         }
     };
-    useEffect(() => {
-        fetchFolders();
-    }, [currentPath]);
 
+    const handelDeleteFolder = async (folderId) => {
+        try {
+            const res = await fetch('/api/folders/' + folderId, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            if (res.ok) {
+                setStatus('Folder deleted Successfully!');
+                fetchFolders();
+            }
+        }
+        catch (err) {
+            console.log(err);
+        }
+    };
+
+    const changeToNewFolder = (path) => {
+        setCurrentPath(prev => prev + path + '/');
+    };
+
+    const handleGoBack = () => {
+        setCurrentPath(prev => {
+            if (!prev) return '';
+            const parts = prev.split('/').filter(p => p);
+            parts.pop();
+            return parts.length > 0 ? parts.join('/') + '/' : '';
+        });
+    };
+    const fileInputRef = useRef(null);
+
+    const handleDrop = (e) => {
+    e.preventDefault();
+    const droppedFiles = e.dataTransfer.files;
+
+    if (fileInputRef.current) {
+        fileInputRef.current.files = droppedFiles;
+    }
+    };
     return (
         <div className="home-container">
             <div className="container">
@@ -155,12 +187,13 @@ const Home = () => {
                             <FaCloudUploadAlt className="icon-primary" /> Upload Files
                         </h2>
                         <form onSubmit={handleUpload}>
-                            <div className="dropzone">
-                                <input type="file" name="files" multiple className="file-input" />
-                                <p className="dropzone-text">
-                                    Drag and drop or review files
-                                </p>
-                            </div>
+                      <div className="dropzone" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e)}>
+                        <input type="file" name="files" multiple className="file-input" ref={fileInputRef}/>
+                        <p className="dropzone-text">
+                            Drag and drop or review files
+                        </p>
+                        </div>
+
                             <button type="submit" disabled={uploading} className="btn btn-primary btn-full-width">
                                 {uploading ? 'Uploading...' : 'Upload Now'}
                             </button>
@@ -176,13 +209,21 @@ const Home = () => {
                     <div className='card glassfolder-section'>
                         <div className='folder-section'>
                             <h2 className="files-title">Your Folders</h2>
-                            <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ New Folder</button>
+                            <div className="folder-actions">
+                                {currentPath && (
+                                    <button className="btn btn-secondary mr-2" onClick={handleGoBack}>
+                                        Go Back
+                                    </button>
+                                )}
+                                <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ New Folder</button>
+                            </div>
                         </div>
                         <div className="folder-list">
                             {folders.map((folder) => (
                                 <div key={folder._id} className="folder-item">
                                     <h3>{folder.filename}</h3>
-                                    <button className="btn btn-primary" onClick={() => navigate(`/folders/${folder._id}`)}>View</button>
+                                    <button className="btn btn-primary" onClick={() => changeToNewFolder(folder.filename)}>View</button>
+                                    <button className="btn btn-warning" onClick={() => handelDeleteFolder(folder._id)}>Delete</button>
                                 </div>
                             ))}
                         </div>

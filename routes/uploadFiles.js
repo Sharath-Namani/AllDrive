@@ -66,7 +66,6 @@ export async function getFiles(req, res) {
         // console.log(req.user);
         const decoded = req.user;
         const files = await bucket.find({ "metadata.userId": req.user.id, "metadata.path": req.query.path }).toArray();
-        // console.log(files);
         if (!files || files.length === 0) {
             return res.status(200).json([]);
         }
@@ -109,16 +108,29 @@ export async function createFolder(req, res) {
         ...folderDoc
     });
 }
-export async function getFolders(req, res){
-    try{
-        console.log(req.query.path );
-        const folders = await foldermodel.find({"metadata.userId":req.user.id,"metadata.path":req.query.path})
-        if(!folders || folders.length === 0){
+export async function getFolders(req, res) {
+    try {
+        console.log(req.query.path);
+        const folders = await foldermodel.find({ "metadata.userId": req.user.id, "metadata.path": req.query.path })
+        if (!folders || folders.length === 0) {
             return res.status(200).json([]);
         }
-       return res.status(200).json(folders);
+        return res.status(200).json(folders);
     }
-    catch(err){
+    catch (err) {
         return res.status(500).json({ error: "Error retrieving folders" });
+    }
+}
+export async function deleteFolder(req, res) {
+    try {
+        const folderId = req.params.folderId;
+        const result = await foldermodel.findByIdAndDelete(folderId);
+        if (result.ok) {
+            res.status(200).json({ message: "Folder deleted successfully", result });
+        }
+        res.status(200).json({ message: "Folder not found" });
+    }
+    catch (err) {
+        res.status(500).json({ error: "Error deleting folder" });
     }
 }
